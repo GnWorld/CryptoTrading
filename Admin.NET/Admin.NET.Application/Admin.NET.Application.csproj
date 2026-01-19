@@ -25,6 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Binance.Net" Version="12.1.0" />
+    <PackageReference Include="CryptoExchange.Net" Version="10.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Admin.NET.Core\Admin.NET.Core.csproj" />
     <ProjectReference Include="..\Plugins\Admin.NET.Plugin.ApprovalFlow\Admin.NET.Plugin.ApprovalFlow.csproj" />
     <ProjectReference Include="..\Plugins\Admin.NET.Plugin.DingTalk\Admin.NET.Plugin.DingTalk.csproj" />
