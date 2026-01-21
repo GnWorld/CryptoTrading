@@ -14,14 +14,14 @@ public class TradeInstrument : EntityBaseTenantOrgDel
     /// <summary>
     /// 基础币种编码
     /// </summary>
-    [SugarColumn(ColumnDescription = "基础币种编码")]
-    public string BaseCurCode { get; set; }
+    [SugarColumn(ColumnDescription = "多方币种")]
+    public string LongCur { get; set; }
 
     /// <summary>
     /// 计价币种编码
     /// </summary>
-    [SugarColumn(ColumnDescription = "计价币种编码")]
-    public string QuoteCurCode { get; set; }
+    [SugarColumn(ColumnDescription = "空方币种")]
+    public string ShortCur { get; set; }
 
     /// <summary>
     /// 展示名称（如：BTC/USDT 永续）
@@ -112,4 +112,7 @@ public class TradeInstrument : EntityBaseTenantOrgDel
     /// </summary>
     [SugarColumn(ColumnDescription = "排序号")]
     public int Sort { get; set; }
+
+
+    public string MarketSource { get; set; }
 }
