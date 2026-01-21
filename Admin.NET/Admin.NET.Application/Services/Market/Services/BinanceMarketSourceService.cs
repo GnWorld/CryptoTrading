@@ -17,7 +17,7 @@ public class BinanceMarketSourceService : IHostedService
 
     //private readonly MarketSnapshotService marketCache;
     private readonly IServiceScopeFactory _scopeFactory;
-    public BinanceMarketSourceService( IServiceScopeFactory scopeFactory)
+    public BinanceMarketSourceService(IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
     }
@@ -42,7 +42,7 @@ public class BinanceMarketSourceService : IHostedService
            scope.ServiceProvider.GetRequiredService<
                SqlSugarRepository<TradeInstrument>>();
         var insList = await instrumentRepo.GetListAsync(x => x.MarketSource.Contains("Binance"));
-        var symbols = insList.Select(x => x.LongCur + x.ShortCur).ToList();
+        var symbols = insList.Select(x => x.BaseCurCode + x.QuoteCurCode).ToList();
         if (symbols.Count == 0)
         {
             symbols.Add("BTCUSDT");
@@ -50,6 +50,7 @@ public class BinanceMarketSourceService : IHostedService
         }
         var client = new BinanceSocketClient();
 
+        //订阅标记价
         await client.UsdFuturesApi.ExchangeData.SubscribeToMarkPriceUpdatesAsync(
                 symbols,
                 3000,
@@ -57,14 +58,15 @@ public class BinanceMarketSourceService : IHostedService
                 {
                     var snapshot = marketCache.GetOrAdd(
                         data.Data.Symbol);
-
                     if (snapshot.UpdateMark(
                            data.Data.MarkPrice,
                            data.Data.IndexPrice))
                     {
                         Print(snapshot);
                     }
-                });
+                }, cancellationToken);
+
+        //订阅买卖价
         await client.UsdFuturesApi.ExchangeData.SubscribeToBookTickerUpdatesAsync(symbols, data =>
         {
             var snapshot = marketCache.GetOrAdd(
@@ -77,7 +79,7 @@ public class BinanceMarketSourceService : IHostedService
             {
                 Print(snapshot);
             }
-        });
+        }, cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
