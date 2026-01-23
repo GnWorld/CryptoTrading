@@ -1,8 +1,8 @@
-﻿
-namespace Admin.NET.Application.Market.Services;
-
+﻿﻿
 using Admin.NET.Application.Market.Models;
 using System.Collections.Concurrent;
+
+namespace Admin.NET.Application.Market.Services;
 
 /// <summary>
 /// 行情内存存储服务（交易系统唯一行情来源）
@@ -26,6 +26,14 @@ public class MarketSnapshotService : IScoped
     {
         var snapshot = _snapshots.GetOrAdd(symbol, new FuturesMarketSnapshot { Symbol = symbol });
         return snapshot;
+    }
+
+    /// <summary>
+    /// 获取所有最新行情
+    /// </summary>
+    public IEnumerable<FuturesMarketSnapshot> GetAllSnapshots()
+    {
+        return _snapshots.Values;
     }
 }
 

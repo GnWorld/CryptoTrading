@@ -8,10 +8,10 @@
     "ConnectionConfigs": [
       {
         //"ConfigId": "1300000000001", // 默认库标识-禁止修改
-        "DbType": "Sqlite", // MySql、SqlServer、Sqlite、Oracle、PostgreSQL、Dm、Kdbndp、Oscar、MySqlConnector、Access、OpenGauss、QuestDB、HG、ClickHouse、GBase、Odbc、Custom
+        "DbType": "PostgreSQL", // MySql、SqlServer、Sqlite、Oracle、PostgreSQL、Dm、Kdbndp、Oscar、MySqlConnector、Access、OpenGauss、QuestDB、HG、ClickHouse、GBase、Odbc、Custom
         "DbNickName": "系统库",
-        "ConnectionString": "DataSource=./Admin.NET.db", // Sqlite
-        //"ConnectionString": "PORT=5432;DATABASE=xxx;HOST=localhost;PASSWORD=xxx;USER ID=xxx", // PostgreSQL
+        //"ConnectionString": "DataSource=./Admin.NET.db", // Sqlite
+        "ConnectionString": "PORT=5432;DATABASE=TradingDb;HOST=127.0.0.1;PASSWORD=Abc123456;USER ID=postgres", // PostgreSQL
         //"ConnectionString": "Server=localhost;Database=xxx;Uid=xxx;Pwd=xxx;SslMode=None;AllowLoadLocalInfile=true;AllowUserVariables=true;", // MySql,
         //"ConnectionString": "User Id=xxx; Password=xxx; Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ORCL)))", // Oracle
         //"ConnectionString": "Server=localhost;Database=xxx;User Id=xxx;Password=xxx;Encrypt=True;TrustServerCertificate=True;", // SqlServer

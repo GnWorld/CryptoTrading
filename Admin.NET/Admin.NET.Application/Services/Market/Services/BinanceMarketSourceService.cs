@@ -1,8 +1,9 @@
-﻿
+﻿﻿
 
 using Admin.NET.Application.Entities.Trading;
 using Admin.NET.Application.Market.Models;
 using Binance.Net.Clients;
+using Binance.Net.Enums;
 using Microsoft.Extensions.Hosting;
 
 namespace Admin.NET.Application.Market.Services;
@@ -38,6 +39,7 @@ public class BinanceMarketSourceService : IHostedService
     {
         using var scope = _scopeFactory.CreateScope();
         var marketCache = scope.ServiceProvider.GetRequiredService<MarketSnapshotService>();
+        var candlestickService = scope.ServiceProvider.GetRequiredService<CandlestickService>();
         var instrumentRepo =
            scope.ServiceProvider.GetRequiredService<
                SqlSugarRepository<TradeInstrument>>();
@@ -63,6 +65,8 @@ public class BinanceMarketSourceService : IHostedService
                            data.Data.IndexPrice))
                     {
                         Print(snapshot);
+                        // 更新行情快照并推送
+                        marketCache.Update(snapshot);
                     }
                 }, cancellationToken);
 
@@ -78,8 +82,38 @@ public class BinanceMarketSourceService : IHostedService
                 data.Data.BestAskQuantity))
             {
                 Print(snapshot);
+                // 更新行情快照并推送
+                marketCache.Update(snapshot);
             }
         }, cancellationToken);
+
+        //订阅K线数据 - 支持多种周期
+        var intervals = new[]
+        {
+            KlineInterval.OneMinute,
+            KlineInterval.FiveMinutes,
+            KlineInterval.FifteenMinutes,
+            KlineInterval.OneHour,
+            KlineInterval.FourHour,
+            KlineInterval.OneDay
+        };
+
+        // 为每个交易对和周期单独订阅K线数据
+        foreach (var symbol in symbols)
+        {
+            foreach (var interval in intervals)
+            {
+                await client.UsdFuturesApi.ExchangeData.SubscribeToKlineUpdatesAsync(symbol, interval, async data =>
+                {
+                    var kline = data.Data;
+                    Console.WriteLine(
+                        $"[{DateTime.Now:HH:mm:ss}] {kline.Symbol} {interval} K线更新");
+                    
+                    // 调用CandlestickService处理K线数据
+                    await candlestickService.HandleKlineUpdateAsync(kline.Symbol, interval.ToString(), data);
+                });
+            }
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
