@@ -45,25 +45,25 @@ public class MarketController : ControllerBase
         return Ok(tickers);
     }
 
-    /// <summary>
-    /// 获取K线数据
-    /// </summary>
-    /// <param name="symbol">交易对标识</param>
-    /// <param name="interval">K线周期</param>
-    /// <param name="limit">返回数量，默认100</param>
-    /// <param name="startTime">开始时间戳（毫秒）</param>
-    /// <param name="endTime">结束时间戳（毫秒）</param>
-    /// <returns></returns>
-    [HttpGet("candlestick/{symbol}/{interval}")]
-    public async Task<IActionResult> GetCandlestick(
-        string symbol,
-        string interval,
-        [FromQuery] int limit = 100,
-        [FromQuery] long? startTime = null,
-        [FromQuery] long? endTime = null)
-    {
-        var candlesticks = await _candlestickService.GetCandlesticksAsync(
-            symbol, interval, limit, startTime, endTime);
-        return Ok(candlesticks);
-    }
+    ///// <summary>
+    ///// 获取K线数据
+    ///// </summary>
+    ///// <param name="symbol">交易对标识</param>
+    ///// <param name="interval">K线周期</param>
+    ///// <param name="limit">返回数量，默认100</param>
+    ///// <param name="startTime">开始时间戳（毫秒）</param>
+    ///// <param name="endTime">结束时间戳（毫秒）</param>
+    ///// <returns></returns>
+    //[HttpGet("candlestick/{symbol}/{interval}")]
+    //public async Task<IActionResult> GetCandlestick(
+    //    string symbol,
+    //    string interval,
+    //    [FromQuery] int limit = 100,
+    //    [FromQuery] long? startTime = null,
+    //    [FromQuery] long? endTime = null)
+    //{
+    //    var candlesticks = await _candlestickService.GetCandlesticksAsync(
+    //        symbol, interval, limit, startTime, endTime);
+    //    return Ok(candlesticks);
+    //}
 }

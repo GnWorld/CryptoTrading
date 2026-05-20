@@ -1,9 +1,10 @@
 using Admin.NET.Application.Entities.Trading;
-using Binance.Net.Interfaces;
-using Binance.Net.Objects.Models.Spot.Socket;
-using Binance.Net.Objects.Models.Futures.Socket;
 using Binance.Net.Enums;
+using Binance.Net.Interfaces;
+using Binance.Net.Objects.Models.Futures.Socket;
+using Binance.Net.Objects.Models.Spot.Socket;
 using SqlSugar;
+using System.Collections.Concurrent;
 
 namespace Admin.NET.Application.Market.Services;
 
@@ -12,13 +13,20 @@ namespace Admin.NET.Application.Market.Services;
 /// </summary>
 public class CandlestickService : IScoped
 {
-    private readonly SqlSugarRepository<Candlestick> _candlestickRepo;
+
 
     // 存储每个交易对每个周期的当前K线周期结束时间
-    private static readonly Dictionary<string, long> _currentPeriodEndTimes = new Dictionary<string, long>();
+    private readonly ConcurrentDictionary<string, long> _currentPeriodEndTimes
+    = new();
+    // 用于同步同一交易对和周期的K线数据处理
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public CandlestickService(SqlSugarRepository<Candlestick> candlestickRepo)
+    private readonly SqlSugarRepository<Candlestick> _candlestickRepo;
+
+    public CandlestickService(IServiceScopeFactory scopeFactory, SqlSugarRepository<Candlestick> candlestickRepo)
     {
+
+        _scopeFactory = scopeFactory;
         _candlestickRepo = candlestickRepo;
     }
 
@@ -33,7 +41,6 @@ public class CandlestickService : IScoped
     {
         try
         {
-
             bool isFinal = false;
             var binanceKline = new BinanceStreamKline
             {
@@ -81,10 +88,10 @@ public class CandlestickService : IScoped
             string key = $"{symbol}_{interval}";
 
             // 检查是否跨周期或当前周期结束
-            if (!_currentPeriodEndTimes.TryGetValue(key, out long lastPeriodEndTime) ||
-                periodEndTime > lastPeriodEndTime ||
-                currentTime >= periodEndTime ||
-                isFinal)
+            if (!_currentPeriodEndTimes.TryGetValue(key, out long lastPeriodEndTime)
+               || periodEndTime > lastPeriodEndTime
+               || currentTime >= periodEndTime
+               || isFinal)
             {
                 // 跨周期或当前周期结束，存储K线数据
                 var candlestick = new Candlestick
@@ -106,34 +113,30 @@ public class CandlestickService : IScoped
 
                 Console.WriteLine("原始数据: " + System.Text.Json.JsonSerializer.Serialize(klineData));
 
-                // 先查询是否存在
-                var existing = await _candlestickRepo.GetFirstAsync(it => it.Symbol == symbol && it.Interval == interval && it.OpenTime == openTime);
+                // 查询是否存在
+                var existing = new Candlestick();
 
-                if (existing != null)
-                {
-                    // 更新现有数据
-                    existing.Open = open;
-                    existing.High = high;
-                    existing.Low = low;
-                    existing.Close = close;
-                    existing.Volume = volume;
-                    existing.CloseTime = closeTime;
-                    existing.QuoteAssetVolume = binanceKline.QuoteVolume;
-                    existing.NumberOfTrades = binanceKline.TradeCount;
-                    existing.TakerBuyBaseAssetVolume = binanceKline.TakerBuyBaseVolume;
-                    existing.TakerBuyQuoteAssetVolume = binanceKline.TakerBuyQuoteVolume;
-                    await _candlestickRepo.UpdateAsync(existing);
-                }
-                else
-                {
-                    // 插入新数据
-                    await _candlestickRepo.InsertAsync(candlestick);
-                }
 
-                // 更新当前周期结束时间
+                // 更新现有数据
+                existing.Open = open;
+                existing.High = high;
+                existing.Low = low;
+                existing.Close = close;
+                existing.Volume = volume;
+                existing.CloseTime = closeTime;
+                existing.QuoteAssetVolume = binanceKline.QuoteVolume;
+                existing.NumberOfTrades = binanceKline.TradeCount;
+                existing.TakerBuyBaseAssetVolume = binanceKline.TakerBuyBaseVolume;
+                existing.TakerBuyQuoteAssetVolume = binanceKline.TakerBuyQuoteVolume;
+                await _candlestickRepo.InsertOrUpdateAsync(existing);
+
+                // 更新当前周期结束时间（线程安全的方式）
+
                 _currentPeriodEndTimes[key] = periodEndTime;
 
+
                 Console.WriteLine($"存储K线数据: {symbol} {interval} {openTime} {close}");
+
             }
         }
         catch (Exception ex)
@@ -183,43 +186,43 @@ public class CandlestickService : IScoped
         }
     }
 
-    /// <summary>
-    /// 获取K线数据
-    /// </summary>
-    /// <param name="symbol">交易对标识</param>
-    /// <param name="interval">K线周期</param>
-    /// <param name="limit">返回数量</param>
-    /// <param name="startTime">开始时间戳（毫秒）</param>
-    /// <param name="endTime">结束时间戳（毫秒）</param>
-    /// <returns>K线数据列表</returns>
-    public async Task<List<Candlestick>> GetCandlesticksAsync(
-        string symbol,
-        string interval,
-        int limit = 100,
-        long? startTime = null,
-        long? endTime = null)
-    {
-        var query = _candlestickRepo.AsQueryable()
-            .Where(it => it.Symbol == symbol && it.Interval == interval);
+    ///// <summary>
+    ///// 获取K线数据
+    ///// </summary>
+    ///// <param name="symbol">交易对标识</param>
+    ///// <param name="interval">K线周期</param>
+    ///// <param name="limit">返回数量</param>
+    ///// <param name="startTime">开始时间戳（毫秒）</param>
+    ///// <param name="endTime">结束时间戳（毫秒）</param>
+    ///// <returns>K线数据列表</returns>
+    //public async Task<List<Candlestick>> GetCandlesticksAsync(
+    //    string symbol,
+    //    string interval,
+    //    int limit = 100,
+    //    long? startTime = null,
+    //    long? endTime = null)
+    //{
+    //    var query = _candlestickRepo.AsQueryable()
+    //        .Where(it => it.Symbol == symbol && it.Interval == interval);
 
-        // 添加时间范围过滤
-        if (startTime.HasValue)
-        {
-            query = query.Where(it => it.OpenTime >= startTime.Value);
-        }
+    //    // 添加时间范围过滤
+    //    if (startTime.HasValue)
+    //    {
+    //        query = query.Where(it => it.OpenTime >= startTime.Value);
+    //    }
 
-        if (endTime.HasValue)
-        {
-            query = query.Where(it => it.OpenTime <= endTime.Value);
-        }
+    //    if (endTime.HasValue)
+    //    {
+    //        query = query.Where(it => it.OpenTime <= endTime.Value);
+    //    }
 
-        // 按开盘时间倒序，然后取最新的N条
-        var candlesticks = await query
-            .OrderByDescending(it => it.OpenTime)
-            .Take(limit)
-            .ToListAsync();
+    //    // 按开盘时间倒序，然后取最新的N条
+    //    var candlesticks = await query
+    //        .OrderByDescending(it => it.OpenTime)
+    //        .Take(limit)
+    //        .ToListAsync();
 
-        // 按开盘时间正序返回，符合前端展示习惯
-        return candlesticks.OrderBy(it => it.OpenTime).ToList();
-    }
+    //    // 按开盘时间正序返回，符合前端展示习惯
+    //    return candlesticks.OrderBy(it => it.OpenTime).ToList();
+    //}
 }

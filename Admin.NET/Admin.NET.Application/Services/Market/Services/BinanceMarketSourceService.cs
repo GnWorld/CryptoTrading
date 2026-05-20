@@ -110,7 +110,7 @@ public class BinanceMarketSourceService : IHostedService
                         $"[{DateTime.Now:HH:mm:ss}] {kline.Symbol} {interval} K线更新");
                     
                     // 调用CandlestickService处理K线数据
-                    await candlestickService.HandleKlineUpdateAsync(kline.Symbol, interval.ToString(), data);
+                    await candlestickService.HandleKlineUpdateAsync(kline.Symbol, interval.ToString(), data.Data);
                 });
             }
         }
